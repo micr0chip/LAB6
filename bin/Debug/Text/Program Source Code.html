@@ -1,0 +1,294 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta charset="utf-8">   
+        <title> Исходный код программы </title>
+		 <style>
+         .fig {
+         text-align: center; 
+         }
+		 </style>
+    </head>
+    <body>
+        <h2 align="center">Исходный код программы</h2>
+<br>using System;
+<br>using System.Collections.Generic;
+<br>using System.Linq;
+<br>using System.Text;
+<br>using System.Threading.Tasks;
+<br>
+<br>namespace WindowsFormsApp2
+<br>{
+<br>    public class Error
+<br>    {
+<br>        private static readonly Dictionary<int, string> Errors = new Dictionary<int, string>
+<br>        {
+<br>            {1, "Неожиданный конец строки."},
+<br>            {2, "Неизвестный тип данных."},
+<br>            {3, "Тип данных отсутствует."},
+<br>            {4, "Невозможно присвоить значение."},
+<br>            {5, "Неправильное имя переменной."},
+<br>            {6, "Неизвестный символ."},
+<br>            {7,"Ожидался символ ';'." },
+<br>           {8,"Ожидался символ '='." },
+<br>            {9, "Название переменной отсутствует." },
+<br>            {10, "Присваиваемое значение отсутствует." }
+<br>
+<br>        };
+<br>        public int Code { get; private set; }//код ошибки
+<br>        public int Line { get; private set; }//строка
+<br>        public int Column { get; private set; }//позиция
+<br>
+<br>        public Error(int code, int line, int column)
+<br>        {
+<br>            Code = code;
+<br>            Line = line;
+<br>            Column = column;
+<br>        }
+<br>        public string FormattedError()
+<br>        {
+<br>            if ((Code == 1))
+<br>            {
+<br>                return string.Format("Ошибка-{0}: {1} (Строка {2})", Code, Errors[Code], Line);
+<br>            }
+<br>            else
+<br>            {
+<br>                return string.Format("Ошибка-{0}: {1} (Строка {2}, Позиция {3})", Code, Errors[Code], Line, Column);
+<br>            }
+<br>        }
+<br>    }
+<br>    public class Token
+<br>    {
+<br>        public int Code { get; set; }
+<br>        public int Line { get; set; }
+<br>        public int Column { get; set; }
+<br>        public Token(int code, int line, int column)
+<br>        {
+<br>            Code = code;
+<br>            Line = line;
+<br>            Column = column;
+<br>        }
+<br>
+<br>    }
+<br>    public class Scanner
+<br>    {
+<br>        public List<List<Token>> ScannedText { get; private set; }//список токенов
+<br>        public Scanner(string[] source)
+<br>        {
+<br>            Errors = new List<Error>();
+<br>            ScannedText = Scan(source);
+<br>        }
+<br>
+<br>        public List<Error> Errors { get; set; }//список ошибок
+<br>        private List<List<Token>> Scan(string[] source)//функция сканирования
+<br>        {
+<br>            var scannedText = new List<List<Token>>();//переменная, которая хранит просканированный текст
+<br>            foreach (var line in source)
+<br>            {
+<br>                var scanned = new List<Token>();//переменная, которая хранит просканированную строку
+<br>                for (var i = 0; i < line.Length; i++)
+<br>                {
+<br>                    if (i + 5 < line.Length)//double
+<br>                        if (line[i] == 'd' && line[i + 1] == 'o' && line[i + 2] == 'u' && line[i + 3] == 'b' && line[i + 4] == 'l' && line[i + 5] == 'e')
+<br>                        {
+<br>                            scanned.Add(new Token(4, Array.IndexOf(source, line) + 1, i + 1));
+<br>                            i += 5;
+<br>                            continue;
+<br>                        }
+<br>
+<br>                    if (i + 4 < line.Length)//float
+<br>                        if (line[i] == 'f' && line[i + 1] == 'l' && line[i + 2] == 'o' && line[i + 3] == 'a' && line[i + 4] == 't')
+<br>                        {
+<br>                            scanned.Add(new Token(5, Array.IndexOf(source, line) + 1, i + 1));
+<br>                            i += 4;
+<br>                            continue;
+<br>                        }
+<br>                    if (char.IsDigit(line[i]))
+<br>                    {
+<br>                        bool checknul = true;
+<br>                        List<char> a = new List<char>();
+<br>                        string b = "";
+<br>                        bool fraction = false;
+<br>                        while (i < line.Length)
+<br>                        {
+<br>                            if (char.IsDigit(line[i]))
+<br>                            {
+<br>                                if (line[i] == '0' && checknul)
+<br>                                {
+<br>                                    i++;
+<br>                                    continue;
+<br>                                }
+<br>                                else
+<br>                                {
+<br>                                    if (!fraction)
+<br>                                        a.Add(line[i]);
+<br>                                    i++;
+<br>                                    checknul = false;
+<br>                                    continue;
+<br>                                }
+<br>                            }
+<br>                            if (line[i] == '.' || line[i] == ',')
+<br>                            {
+<br>                                i++;
+<br>                                fraction = true;
+<br>                                continue;
+<br>                            }
+<br>                            if (checknul)
+<br>                                a.Add('0');
+<br>                            break;
+<br>                        }
+<br>                        i--;
+<br>                        for (int j = 0; j < a.Count; j++)
+<br>                            b += a[j].ToString();
+<br>                        int n = NumResolution(b, fraction);
+<br>                        scanned.Add(new Token(n, Array.IndexOf(source, line) + 1, i + 1));
+<br>                        continue;
+<br>                    }
+<br>
+<br>                    if (line[i] >= 'a' & line[i] <= 'z' || line[i] >= 'A' & line[i] <= 'Z')
+<br>                    {
+<br>                        scanned.Add(new Token(11, Array.IndexOf(source, line) + 1, i + 1));
+<br>                        i++;
+<br>                        while (i < line.Length)
+<br>                        {
+<br>                            if (line[i] >= 'a' & line[i] <= 'z' || line[i] >= 'A' & line[i] <= 'Z' || line[i] >= '0' & line[i] <= '9')
+<br>                            {
+<br>                                i++;
+<br>                                continue;
+<br>                            }
+<br>                            break;
+<br>                        }
+<br>                        i--;
+<br>                        continue;
+<br>                    }
+<br>
+<br>                    switch (line[i])
+<br>                    {
+<br>                        case ';':
+<br>                            scanned.Add(new Token(12, Array.IndexOf(source, line) + 1, i + 1));
+<br>                            break;
+<br>                        case '=':
+<br>                            scanned.Add(new Token(13, Array.IndexOf(source, line) + 1, i + 1));
+<br>                            break;
+<br>                        case '-':
+<br>                            scanned.Add(new Token(16, Array.IndexOf(source, line) + 1, i + 1));
+<br>                            break;
+<br>                        case ' ':
+<br>                            break;
+<br>                        default:
+<br>                            Errors.Add(new Error(6, Array.IndexOf(source, line) + 1, i + 1));
+<br>                            break;
+<br>                    }
+<br>                }
+<br>                scannedText.Add(scanned);
+<br>            }
+<br>            return scannedText;
+<br>        }
+<br>        public int NumResolution(string str, bool fraction)//функция сравнения чисел на привышение
+<br>        {
+<br>            int result = 0;
+<br>            if (fraction)
+<br>            {
+<br>                result = String.Compare(str, "999999999");
+<br>                if (result < 0 && str.Length < 10) return 9;
+<br>                result = String.Compare(str, "999999999");
+<br>                if (result < 0 && str.Length < 10) return 18;
+<br>            }
+<br>            return 19;
+<br>        }
+<br>    }
+<br>    public class Syntax
+<br>    {
+<br>        public List<Error> Errors { get; set; }// список ошибок
+<br>        List<Token> line;//список токенов
+<br>        int iterator, lineNum;
+<br>
+<br>        public Syntax(List<List<Token>> scanned)
+<br>        {
+<br>            Errors = new List<Error>();
+<br>            StartSyntax(scanned);
+<br>        }
+<br>
+<br>        private void StartSyntax(List<List<Token>> scanned)//функция определения переменных
+<br>        {
+<br>            if (Errors.Count != 0)
+<br>                return;
+<br>            foreach (var Line in scanned)
+<br>            {
+<br>                line = Line;
+<br>                iterator = 0;
+<br>                lineNum = scanned.IndexOf(Line) + 1;
+<br>                logexp();
+<br>            }
+<br>        }
+<br>
+<br>        private void logexp()//функция начала разбора
+<br>        {
+<br>            if (iterator >= line.Count)
+<br>            {
+<br>                return;
+<br>            }
+<br>            if (line[iterator].Code != 4 && line[iterator].Code != 5)
+<br>            {
+<br>                if (line[iterator].Code == 11)
+<br>                    Errors.Add(new Error(3, line[iterator].Line, line[iterator].Column));
+<br>            }
+<br>            if (iterator + 1 < line.Count)
+<br>                if (line[iterator + 1].Code == 5)
+<br>                    Next();
+<br>            if (line[iterator].Code == 11 && line[iterator + 1].Code == 11)
+<br>                Errors.Add(new Error(2, line[iterator].Line, line[iterator].Column));
+<br>            Next();
+<br>            assign();
+<br>            }
+<br>            private void Next()//переход на след символ
+<br>        {
+<br>            if (iterator >= line.Count - 1)
+<br>            {
+<br>                return;
+<br>            }
+<br>            else
+<br>                iterator++;//передвижение каретки 
+<br>        }
+<br>        private void assign()
+<br>        {
+<br>            if (Errors.Count == 0)
+<br>            {
+<br>                if (line[iterator].Code != 11) 
+<br>                { 
+<br>                 Errors.Add(new Error(9, line[iterator].Line, line[iterator].Column)); 
+<br>                }
+<br>                else Next();
+<br>            }
+<br>            if (line[iterator].Code != 13) 
+<br>            { 
+<br>                Errors.Add(new Error(8, line[iterator].Line, line[iterator].Column)); Next(); 
+<br>            }
+<br>            if (line[iterator].Code == 12)
+<br>            {
+<br>                Errors.Add(new Error(10, line[iterator].Line, line[iterator].Column)); Next();
+<br>            }
+<br>            else Next();
+<br>
+<br>            switch (line[0].Code)
+<br>            {
+<br>                case 4:
+<br>                    {
+<br>                        if (line[iterator].Code == 16) Next();
+<br>                        if (line[iterator].Code == 9 || line[iterator].Code == 18) Next();
+<br>                        else { Errors.Add(new Error(4, line[iterator].Line, line[iterator].Column)); Next(); }
+<br>                        break;
+<br>                    }
+<br>                case 5:
+<br>                    {
+<br>                        if (line[iterator].Code == 16) Next();
+<br>                        if (line[iterator].Code == 9) Next();
+<br>                        else { Errors.Add(new Error(4, line[iterator].Line, line[iterator].Column)); Next(); }
+<br>                        break;
+<br>                    }
+<br>                default: Next(); break;
+<br>            }
+<br>            if (line[iterator].Code != 12) Errors.Add(new Error(7, line[iterator].Line, line[iterator].Column));
+<br>        }
+<br>    }
+<br>}
